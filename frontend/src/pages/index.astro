@@ -1,17 +1,161 @@
 ---
-
+import '../styles/global.css';
 ---
 
 <html lang="en">
 	<head>
 		<meta charset="utf-8" />
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
 		<meta name="viewport" content="width=device-width" />
 		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
+		<title>KenKen - Modern Puzzle Game</title>
 	</head>
 	<body>
-		<h1>Astro</h1>
+		<div class="container">
+			<h1>KenKen</h1>
+			
+			<div id="game-card" class="card">
+				<div id="grid-container" class="kenken-grid"></div>
+			</div>
+
+			<div class="controls">
+				<button id="btn-new" class="primary">New Game</button>
+				<button id="btn-solve">Solve</button>
+        <button id="btn-hint">Hint</button>
+			</div>
+		</div>
+
+		<script>
+			let currentPuzzle = null;
+			let selectedCell = null;
+
+			async function fetchPuzzle() {
+				try {
+					const res = await fetch('http://localhost:3001/api/puzzle');
+					const json = await res.json();
+					if (json.status === 'success') {
+						currentPuzzle = json.data_;
+						renderGrid(currentPuzzle);
+					}
+				} catch (err) {
+					console.error('Failed to fetch puzzle:', err);
+				}
+			}
+
+			function renderGrid(puzzle) {
+				const container = document.getElementById('grid-container');
+				const size = puzzle.puzzleSize;
+				container.style.gridTemplateColumns = `repeat(${size}, 60px)`;
+				container.innerHTML = '';
+
+				for (let r = 1; r <= size; r++) {
+					for (let c = 1; c <= size; c++) {
+						const cell = document.createElement('div');
+						cell.className = 'cell';
+						cell.dataset.row = r;
+						cell.dataset.col = c;
+						
+						// Add cage label if it's the top-left cell of a cage
+						const cage = puzzle.puzzleCages.find(cg => cg.cageCells[0][0] === r && cg.cageCells[0][1] === c);
+						if (cage) {
+							const label = document.createElement('span');
+							label.className = 'cage-label';
+							const op = formatOp(cage.cageOperation);
+							label.textContent = `${cage.cageTarget}${op}`;
+							cell.appendChild(label);
+						}
+
+            // Draw cage borders
+            drawBorders(cell, r, c, puzzle.puzzleCages);
+
+						cell.addEventListener('click', () => selectCell(r, c));
+						container.appendChild(cell);
+					}
+				}
+			}
+
+      function drawBorders(cell, r, c, cages) {
+        const myCage = cages.find(cg => cg.cageCells.some(cellPos => cellPos[0] === r && cellPos[1] === c));
+        if (!myCage) return;
+
+        // Check if adjacent cells are in the same cage
+        const sameCage = (r2, c2) => myCage.cageCells.some(p => p[0] === r2 && p[1] === c2);
+
+        if (!sameCage(r - 1, c)) cell.classList.add('border-top');
+        if (!sameCage(r + 1, c)) cell.classList.add('border-bottom');
+        if (!sameCage(r, c - 1)) cell.classList.add('border-left');
+        if (!sameCage(r, c + 1)) cell.classList.add('border-right');
+      }
+
+			function formatOp(op) {
+				switch (op) {
+					case 'Add': return '+';
+					case 'Subtract': return '-';
+					case 'Multiply': return '×';
+					case 'Divide': return '÷';
+					case 'None': return '';
+					default: return '';
+				}
+			}
+
+			function selectCell(r, c) {
+				if (selectedCell) {
+					document.querySelector(`.cell[data-row="${selectedCell.r}"][data-col="${selectedCell.c}"]`)?.classList.remove('selected');
+				}
+				selectedCell = { r, c };
+				document.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`)?.classList.add('selected');
+			}
+
+			window.addEventListener('keydown', (e) => {
+				if (!selectedCell) return;
+				const { r, c } = selectedCell;
+				const val = parseInt(e.key);
+				if (val >= 1 && val <= 9) {
+					const cell = document.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
+					if (cell) {
+            const span = cell.querySelector('.val') || document.createElement('span');
+            span.className = 'val';
+            span.textContent = val;
+            if (!cell.contains(span)) cell.appendChild(span);
+          }
+				} else if (e.key === 'Backspace' || e.key === 'Delete') {
+          const cell = document.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
+          cell.querySelector('.val')?.remove();
+        }
+			});
+
+			document.getElementById('btn-new').addEventListener('click', fetchPuzzle);
+			
+      document.getElementById('btn-solve').addEventListener('click', async () => {
+        if (!currentPuzzle) return;
+        const res = await fetch('http://localhost:3001/api/solve', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(currentPuzzle)
+        });
+        const json = await res.json();
+        if (json.status === 'success') {
+          fillSolution(json.data_);
+        }
+      });
+
+      function fillSolution(solution) {
+        const cells = document.querySelectorAll('.cell');
+        cells.forEach(cell => {
+          const r = parseInt(cell.dataset.row) - 1;
+          const c = parseInt(cell.dataset.col) - 1;
+          const val = solution[r][c];
+          if (val) {
+            const span = cell.querySelector('.val') || document.createElement('span');
+            span.className = 'val';
+            span.textContent = val;
+            if (!cell.contains(span)) cell.appendChild(span);
+          }
+        });
+      }
+
+			// Initial load
+			fetchPuzzle();
+		</script>
 	</body>
 </html>
