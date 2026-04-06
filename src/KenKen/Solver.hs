@@ -7,7 +7,10 @@ import KenKen.Validation
 import Data.Maybe (isNothing)
 import Data.List (minimumBy, sortBy)
 import Data.Ord (comparing)
-import Control.Monad (guard)
+import Control.Monad (guard, when)
+import qualified Data.Set as Set
+import Data.Array (assocs, (!))
+import Data.Maybe (isNothing, isJust)
 
 -- Solve a puzzle using backtracking
 solvePuzzle :: Puzzle -> Maybe Grid

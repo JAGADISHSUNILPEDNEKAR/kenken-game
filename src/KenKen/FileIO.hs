@@ -7,6 +7,9 @@ import System.Directory
 import System.FilePath
 import Control.Exception
 import Data.Time
+import qualified Data.Set as Set
+import Control.Monad (unless)
+import Data.List (sort)
 
 -- Load puzzle from file
 loadPuzzle :: FilePath -> IO (Either String Puzzle)
@@ -41,7 +44,7 @@ loadGame = loadPuzzle  -- For now, same as loading puzzle
 -- Save game state
 saveGame :: FilePath -> GameState -> IO (Either String ())
 saveGame path gs = do
-  let puzzle = Puzzle (gsSize gs) (gsCages gs) (Just $ gsGrid gs)
+  let puzzle = Puzzle (gsSize gs) (gsCages gs) (Just $ gridToNestedList $ gsGrid gs)
   savePuzzle path puzzle
 
 -- Get list of puzzle files

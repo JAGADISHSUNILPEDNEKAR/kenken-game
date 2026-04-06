@@ -1,6 +1,7 @@
 module KenKen.Cage where
 
 import KenKen.Types
+import KenKen.Grid
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Maybe (isJust, fromJust)

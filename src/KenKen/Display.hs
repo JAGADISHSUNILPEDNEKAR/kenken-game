@@ -2,11 +2,13 @@ module KenKen.Display where
 
 import KenKen.Types
 import KenKen.Cage
-import Data.Array
-import Data.Maybe (fromMaybe)
+import KenKen.Grid
+import Data.Array (assocs, bounds, (!))
+import Data.Maybe (fromMaybe, isJust)
 import Data.List (intercalate, nub, sort)
 import qualified Data.Set as Set
 import System.Console.ANSI
+import Control.Monad (when, unless, replicateM_)
 
 -- Display the game board
 displayBoard :: GameState -> IO ()
@@ -25,8 +27,6 @@ displayBoard gs = do
 displayGrid :: GameState -> IO ()
 displayGrid gs = do
   let size = gsSize gs
-      grid = gsGrid gs
-      cages = gsCages gs
   
   -- Display column numbers
   putStr "     "
@@ -59,11 +59,10 @@ displayRow gs row = do
         val = getCellValue grid pos
         isError = pos `Set.member` errors
         isSelected = Just pos == selected
-        cageId = fromMaybe 0 $ getCageId cages pos
     
     -- Set color based on state
-    when isError $ setSGR [SetColor Foreground Vivid Red]
-    when isSelected $ setSGR [SetColor Background Dull Yellow]
+    if isError then setSGR [SetColor Foreground Vivid Red] else return ()
+    if isSelected then setSGR [SetColor Background Dull Yellow] else return ()
     
     -- Display cage info or value
     if row == 1 && col == 1 || isFirstInCage cages pos
@@ -74,7 +73,7 @@ displayRow gs row = do
     
     -- Display vertical separator
     if hasRightBorder cages pos size then putStr "|" else putStr " "
-  ) [1..size]
+    ) [1..size]
   
   putStrLn ""
   
@@ -84,7 +83,7 @@ displayRow gs row = do
     if hasBottomBorder cages (row, col) size
       then putStr "----+"
       else putStr "    +"
-  ) [1..size]
+    ) [1..size]
   putStrLn ""
 
 -- Display cage information (operation and target)
@@ -132,10 +131,11 @@ displayStatus gs = do
   
   putStrLn $ "Progress: " ++ progress
   
-  when (gsCompleted gs) $ do
+  if gsCompleted gs then do
     setSGR [SetColor Foreground Vivid Green]
     putStrLn "🎉 Congratulations! Puzzle solved! 🎉"
     setSGR [Reset]
+  else return ()
   
   unless (Set.null $ gsErrors gs) $ do
     setSGR [SetColor Foreground Vivid Red]
@@ -190,4 +190,4 @@ displaySimpleGrid grid = do
   mapM_ (\r -> do
     mapM_ (\c -> putStr $ maybe "." show (getCellValue grid (r, c)) ++ " ") [1..size]
     putStrLn ""
-  ) [1..size]
+    ) [1..size]

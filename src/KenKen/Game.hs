@@ -9,7 +9,7 @@ import KenKen.FileIO
 import KenKen.Parser
 import System.IO
 import System.Console.ANSI
-import Control.Monad (when, unless)
+import Control.Monad (when, unless, void)
 import Data.Maybe (fromMaybe, isJust)
 import qualified Data.Set as Set
 
@@ -150,10 +150,10 @@ handleHint gs history = do
   case getHint gs of
     Nothing -> do
       displayError "No hint available"
-      _ <- getChar
+      void getChar
     Just (pos, val) -> do
       displaySuccess $ "Hint: Try " ++ show val ++ " at position " ++ show pos
-      _ <- getChar
+      void getChar
   gameLoop gs history
 
 -- Handle undo
