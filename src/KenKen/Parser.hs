@@ -1,9 +1,10 @@
 module KenKen.Parser where
 
 import KenKen.Types
+import Data.Array (assocs)
 import Text.Megaparsec
 import Text.Megaparsec.Char
-import Text.Megaparsec.Char.Lexer as L
+import qualified Text.Megaparsec.Char.Lexer as L
 import Data.Void
 import Data.Set (Set)
 import qualified Data.Set as Set

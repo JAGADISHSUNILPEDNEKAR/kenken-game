@@ -1,11 +1,11 @@
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveGeneric, OverloadedStrings #-}
 module KenKen.Types where
 
 import Data.Array
 import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Generics
-import Data.Aeson
+import Data.Aeson hiding (Array, Value)
 import qualified Data.Vector as V
 
 -- Basic types
@@ -57,12 +57,14 @@ instance ToJSON GameState where
     ]
 
 instance FromJSON GameState where
-  parseJSON = withObject "GameState" $ \v -> GameState
-    <$> (nestedListToGrid <$> v .: "size" <*> v .: "grid")
-    <*> v .: "cages"
-    <*> v .: "selectedCell"
-    <*> v .: "errors"
-    <*> v .: "completed"
+  parseJSON = withObject "GameState" $ \v -> do
+    s <- v .: "size"
+    g <- nestedListToGrid s <$> v .: "grid"
+    GameState g s
+      <$> v .: "cages"
+      <*> v .: "selectedCell"
+      <*> v .: "errors"
+      <*> v .: "completed"
 
 -- Move result
 data MoveResult = Valid | Invalid String | Completed
