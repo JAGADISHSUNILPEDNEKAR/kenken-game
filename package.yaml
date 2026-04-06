@@ -34,7 +34,7 @@ library:
 executables:
   kenken-game-exe:
     main:                Main.hs
-    source-dirs:         app
+    source-dirs:         app/cli
     ghc-options:
     - -threaded
     - -rtsopts
@@ -42,8 +42,8 @@ executables:
     - kenken-game
 
   kenken-server:
-    main:                Server.hs
-    source-dirs:         app
+    main:                Main.hs
+    source-dirs:         app/api
     ghc-options:
     - -threaded
     - -rtsopts

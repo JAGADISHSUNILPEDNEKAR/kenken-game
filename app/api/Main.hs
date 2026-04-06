@@ -20,12 +20,13 @@ import KenKen.Parser
 
 -- API Response Types
 data ApiResponse a = ApiResponse
-  { status :: String
-  , data_ :: Maybe a
-  , error :: Maybe String
+  { apiStatus :: String
+  , apiData :: Maybe a
+  , apiError :: Maybe String
   } deriving (Generic)
 
 instance ToJSON a => ToJSON (ApiResponse a)
+instance FromJSON a => FromJSON (ApiResponse a)
 
 main :: IO ()
 main = scotty 3001 $ do
@@ -51,8 +52,8 @@ main = scotty 3001 $ do
   post "/api/solve" $ do
     puzzle <- jsonData :: ActionM Puzzle
     case solvePuzzle puzzle of
-      Nothing -> json $ ApiResponse "error" Nothing (Just "No solution found")
-      Just sol -> json $ ApiResponse "success" (Just sol) Nothing
+      Nothing -> json (ApiResponse "error" Nothing (Just "No solution found") :: ApiResponse ())
+      Just sol -> json $ ApiResponse "success" (Just (gridToNestedList sol)) Nothing
 
   -- Health check
   get "/health" $ do
