@@ -1,0 +1,136 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.36.0.
+--
+-- see: https://github.com/sol/hpack
+
+name:           kenken-game
+version:        0.1.0.0
+description:    KenKen puzzle game implementation in Haskell
+homepage:       https://github.com/yourusername/kenken-game#readme
+bug-reports:    https://github.com/yourusername/kenken-game/issues
+author:         Your Name
+maintainer:     your.email@example.com
+copyright:      2024 Your Name
+license:        BSD3
+build-type:     Simple
+extra-source-files:
+    README.md
+
+source-repository head
+  type: git
+  location: https://github.com/yourusername/kenken-game
+
+library
+  exposed-modules:
+      KenKen
+      KenKen.Cage
+      KenKen.Display
+      KenKen.FileIO
+      KenKen.Game
+      KenKen.Grid
+      KenKen.Parser
+      KenKen.Solver
+      KenKen.Types
+      KenKen.Validation
+  other-modules:
+      Paths_kenken_game
+  hs-source-dirs:
+      src
+  build-depends:
+      aeson >=2.0
+    , ansi-terminal >=0.11
+    , array >=0.5.4.0
+    , base >=4.7 && <5
+    , containers >=0.6.0.1
+    , directory >=1.3.6.0
+    , filepath >=1.4.2.1
+    , http-types >=0.12
+    , megaparsec >=9.0.0
+    , mtl >=2.2.2
+    , scotty >=0.12
+    , text >=1.2.4.1
+    , time >=1.9.3
+    , vector >=0.12.3
+    , wai-cors >=0.2.7
+  default-language: Haskell2010
+
+executable kenken-game-exe
+  main-is: Main.hs
+  other-modules:
+      Paths_kenken_game
+  hs-source-dirs:
+      app/cli
+  ghc-options: -threaded -rtsopts
+  build-depends:
+      aeson >=2.0
+    , ansi-terminal >=0.11
+    , array >=0.5.4.0
+    , base >=4.7 && <5
+    , containers >=0.6.0.1
+    , directory >=1.3.6.0
+    , filepath >=1.4.2.1
+    , http-types >=0.12
+    , kenken-game
+    , megaparsec >=9.0.0
+    , mtl >=2.2.2
+    , scotty >=0.12
+    , text >=1.2.4.1
+    , time >=1.9.3
+    , vector >=0.12.3
+    , wai-cors >=0.2.7
+  default-language: Haskell2010
+
+executable kenken-server
+  main-is: Main.hs
+  other-modules:
+      Paths_kenken_game
+  hs-source-dirs:
+      app/api
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      aeson
+    , ansi-terminal >=0.11
+    , array >=0.5.4.0
+    , base >=4.7 && <5
+    , containers >=0.6.0.1
+    , directory >=1.3.6.0
+    , filepath >=1.4.2.1
+    , http-types >=0.12
+    , kenken-game
+    , megaparsec >=9.0.0
+    , mtl >=2.2.2
+    , scotty
+    , text >=1.2.4.1
+    , time >=1.9.3
+    , vector >=0.12.3
+    , wai-cors
+  default-language: Haskell2010
+
+test-suite kenken-game-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Paths_kenken_game
+  hs-source-dirs:
+      test
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      aeson >=2.0
+    , ansi-terminal >=0.11
+    , array >=0.5.4.0
+    , base >=4.7 && <5
+    , containers >=0.6.0.1
+    , directory >=1.3.6.0
+    , filepath >=1.4.2.1
+    , hspec
+    , http-types >=0.12
+    , kenken-game
+    , megaparsec >=9.0.0
+    , mtl >=2.2.2
+    , scotty >=0.12
+    , text >=1.2.4.1
+    , time >=1.9.3
+    , vector >=0.12.3
+    , wai-cors >=0.2.7
+  default-language: Haskell2010
