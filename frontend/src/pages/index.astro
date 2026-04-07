@@ -8,6 +8,7 @@ import '../styles/global.css';
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 		<meta name="viewport" content="width=device-width" />
 		<meta name="generator" content={Astro.generator} />
+    <meta name="description" content="A modern, high-performance KenKen puzzle game built with Astro and Haskell." />
 		<title>KenKen - Modern Puzzle Game</title>
 	</head>
 	<body>
@@ -33,8 +34,8 @@ import '../styles/global.css';
 				try {
 					const res = await fetch('http://localhost:3001/api/puzzle');
 					const json = await res.json();
-					if (json.status === 'success') {
-						currentPuzzle = json.data_;
+					if (json.apiStatus === 'success') {
+						currentPuzzle = json.apiData;
 						renderGrid(currentPuzzle);
 					}
 				} catch (err) {
@@ -134,10 +135,59 @@ import '../styles/global.css';
           body: JSON.stringify(currentPuzzle)
         });
         const json = await res.json();
-        if (json.status === 'success') {
-          fillSolution(json.data_);
+        if (json.apiStatus === 'success') {
+          fillSolution(json.apiData);
         }
       });
+
+      document.getElementById('btn-hint').addEventListener('click', async () => {
+        if (!currentPuzzle) return;
+        
+        const grid = getCurrentGrid(currentPuzzle.puzzleSize);
+        const gameState = {
+          size: currentPuzzle.puzzleSize,
+          grid: grid,
+          cages: currentPuzzle.puzzleCages,
+          selectedCell: selectedCell ? [selectedCell.r, selectedCell.c] : null,
+          errors: [],
+          completed: false
+        };
+
+        const res = await fetch('http://localhost:3001/api/hint', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(gameState)
+        });
+        const json = await res.json();
+        if (json.apiStatus === 'success') {
+          const [pos, val] = json.apiData;
+          fillCell(pos[0], pos[1], val);
+        }
+      });
+
+      function getCurrentGrid(size) {
+        const grid = [];
+        for (let r = 1; r <= size; r++) {
+          const row = [];
+          for (let c = 1; c <= size; c++) {
+            const cell = document.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
+            const valSpan = cell.querySelector('.val');
+            row.push(valSpan ? parseInt(valSpan.textContent) : null);
+          }
+          grid.push(row);
+        }
+        return grid;
+      }
+
+      function fillCell(r, c, val) {
+        const cell = document.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
+        if (cell) {
+          const span = cell.querySelector('.val') || document.createElement('span');
+          span.className = 'val hint';
+          span.textContent = val;
+          if (!cell.contains(span)) cell.appendChild(span);
+        }
+      }
 
       function fillSolution(solution) {
         const cells = document.querySelectorAll('.cell');
