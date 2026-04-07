@@ -25,6 +25,16 @@ import '../styles/global.css';
 			</div>
 
 			<div class="controls">
+        <select id="size-select" class="dropdown">
+          <option value="4">4x4</option>
+          <option value="6" selected>6x6</option>
+          <option value="9">9x9</option>
+        </select>
+        <select id="diff-select" class="dropdown">
+          <option value="Easy">Easy</option>
+          <option value="Medium" selected>Medium</option>
+          <option value="Hard">Hard</option>
+        </select>
 				<button id="btn-new" class="primary">New Game</button>
         <button id="btn-undo">Undo</button>
         <button id="btn-redo">Redo</button>
@@ -89,7 +99,14 @@ import '../styles/global.css';
       async function fetchPuzzle() {
         resetGameState();
         try {
-          const res = await fetch('http://localhost:3001/api/puzzle');
+          const size = parseInt(document.getElementById('size-select').value);
+          const diff = document.getElementById('diff-select').value;
+          
+          const res = await fetch('http://localhost:3001/api/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ size: size, difficulty: diff })
+          });
           const json = await res.json();
           if (json.apiStatus === 'success') {
             currentPuzzle = json.apiData;

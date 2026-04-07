@@ -158,3 +158,26 @@ button.primary {
   color: var(--success);
 }
 
+select.dropdown {
+  padding: 0.75rem 1.5rem;
+  border-radius: 12px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  color: var(--text-main);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  appearance: none;
+}
+
+select.dropdown:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--accent-primary);
+}
+
+select.dropdown option {
+  background: var(--bg-color);
+  color: var(--text-main);
+}
+
+
