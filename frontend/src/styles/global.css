@@ -133,3 +133,28 @@ button.primary {
   background: linear-gradient(to right, var(--accent-primary), var(--accent-secondary));
   border: none;
 }
+
+.status-bar {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.status-item span {
+  color: var(--text-main);
+  margin-left: 0.5rem;
+}
+
+.cell.error {
+  color: var(--error);
+  background: rgba(239, 68, 68, 0.2);
+}
+
+.val.hint {
+  color: var(--success);
+}
+
