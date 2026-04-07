@@ -10,125 +10,366 @@ import '../styles/global.css';
 		<meta name="generator" content={Astro.generator} />
     <meta name="description" content="A modern, high-performance KenKen puzzle game built with Astro and Haskell." />
 		<title>KenKen - Modern Puzzle Game</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 	</head>
 	<body>
 		<div class="container">
 			<h1>KenKen</h1>
 			
 			<div id="game-card" class="card">
+        <div class="status-bar">
+          <div class="status-item">Time: <span id="time-display">00:00</span></div>
+          <div class="status-item">Moves: <span id="moves-display">0</span></div>
+        </div>
 				<div id="grid-container" class="kenken-grid"></div>
 			</div>
 
 			<div class="controls">
 				<button id="btn-new" class="primary">New Game</button>
+        <button id="btn-undo">Undo</button>
+        <button id="btn-redo">Redo</button>
 				<button id="btn-solve">Solve</button>
         <button id="btn-hint">Hint</button>
 			</div>
 		</div>
 
 		<script>
-			let currentPuzzle = null;
-			let selectedCell = null;
+      let currentPuzzle = null;
+      let selectedCell = null;
+      let moveCount = 0;
+      let timerInterval = null;
+      let secondsElapsed = 0;
+      let history = [];
+      let redoStack = [];
+      let gameWon = false;
 
-			async function fetchPuzzle() {
-				try {
-					const res = await fetch('http://localhost:3001/api/puzzle');
-					const json = await res.json();
-					if (json.apiStatus === 'success') {
-						currentPuzzle = json.apiData;
-						renderGrid(currentPuzzle);
-					}
-				} catch (err) {
-					console.error('Failed to fetch puzzle:', err);
-				}
-			}
+      function formatTime(sec) {
+        const m = Math.floor(sec / 60).toString().padStart(2, '0');
+        const s = (sec % 60).toString().padStart(2, '0');
+        return `${m}:${s}`;
+      }
 
-			function renderGrid(puzzle) {
-				const container = document.getElementById('grid-container');
-				const size = puzzle.puzzleSize;
-				container.style.gridTemplateColumns = `repeat(${size}, 60px)`;
-				container.innerHTML = '';
+      function startTimer() {
+        if (!timerInterval && !gameWon) {
+          timerInterval = setInterval(() => {
+            if (!gameWon) {
+              secondsElapsed++;
+              document.getElementById('time-display').textContent = formatTime(secondsElapsed);
+            }
+          }, 1000);
+        }
+      }
 
-				for (let r = 1; r <= size; r++) {
-					for (let c = 1; c <= size; c++) {
-						const cell = document.createElement('div');
-						cell.className = 'cell';
-						cell.dataset.row = r;
-						cell.dataset.col = c;
-						
-						// Add cage label if it's the top-left cell of a cage
-						const cage = puzzle.puzzleCages.find(cg => cg.cageCells[0][0] === r && cg.cageCells[0][1] === c);
-						if (cage) {
-							const label = document.createElement('span');
-							label.className = 'cage-label';
-							const op = formatOp(cage.cageOperation);
-							label.textContent = `${cage.cageTarget}${op}`;
-							cell.appendChild(label);
-						}
+      function stopTimer() {
+        if (timerInterval) {
+          clearInterval(timerInterval);
+          timerInterval = null;
+        }
+      }
+
+      function resetGameState() {
+        stopTimer();
+        secondsElapsed = 0;
+        moveCount = 0;
+        history = [];
+        redoStack = [];
+        gameWon = false;
+        selectedCell = null;
+        document.getElementById('time-display').textContent = formatTime(0);
+        document.getElementById('moves-display').textContent = 0;
+      }
+
+      function incrementMove() {
+        if (gameWon) return;
+        moveCount++;
+        document.getElementById('moves-display').textContent = moveCount;
+        startTimer();
+      }
+
+      async function fetchPuzzle() {
+        resetGameState();
+        try {
+          const res = await fetch('http://localhost:3001/api/puzzle');
+          const json = await res.json();
+          if (json.apiStatus === 'success') {
+            currentPuzzle = json.apiData;
+            renderGrid(currentPuzzle);
+            startTimer();
+          }
+        } catch (err) {
+          console.error('Failed to fetch puzzle:', err);
+        }
+      }
+
+      function renderGrid(puzzle) {
+        const container = document.getElementById('grid-container');
+        const size = puzzle.puzzleSize;
+        container.style.gridTemplateColumns = `repeat(${size}, 60px)`;
+        container.innerHTML = '';
+
+        for (let r = 1; r <= size; r++) {
+          for (let c = 1; c <= size; c++) {
+            const cell = document.createElement('div');
+            cell.className = 'cell';
+            cell.dataset.row = r;
+            cell.dataset.col = c;
+            
+            // Add cage label if it's the top-left cell of a cage
+            const cage = puzzle.puzzleCages.find(cg => cg.cageCells[0][0] === r && cg.cageCells[0][1] === c);
+            if (cage) {
+              const label = document.createElement('span');
+              label.className = 'cage-label';
+              const op = formatOp(cage.cageOperation);
+              label.textContent = `${cage.cageTarget}${op}`;
+              cell.appendChild(label);
+            }
 
             // Draw cage borders
             drawBorders(cell, r, c, puzzle.puzzleCages);
 
-						cell.addEventListener('click', () => selectCell(r, c));
-						container.appendChild(cell);
-					}
-				}
-			}
+            cell.addEventListener('click', () => selectCell(r, c));
+            container.appendChild(cell);
+          }
+        }
+      }
 
       function drawBorders(cell, r, c, cages) {
         const myCage = cages.find(cg => cg.cageCells.some(cellPos => cellPos[0] === r && cellPos[1] === c));
         if (!myCage) return;
-
-        // Check if adjacent cells are in the same cage
         const sameCage = (r2, c2) => myCage.cageCells.some(p => p[0] === r2 && p[1] === c2);
-
         if (!sameCage(r - 1, c)) cell.classList.add('border-top');
         if (!sameCage(r + 1, c)) cell.classList.add('border-bottom');
         if (!sameCage(r, c - 1)) cell.classList.add('border-left');
         if (!sameCage(r, c + 1)) cell.classList.add('border-right');
       }
 
-			function formatOp(op) {
-				switch (op) {
-					case 'Add': return '+';
-					case 'Subtract': return '-';
-					case 'Multiply': return '×';
-					case 'Divide': return '÷';
-					case 'None': return '';
-					default: return '';
-				}
-			}
-
-			function selectCell(r, c) {
-				if (selectedCell) {
-					document.querySelector(`.cell[data-row="${selectedCell.r}"][data-col="${selectedCell.c}"]`)?.classList.remove('selected');
-				}
-				selectedCell = { r, c };
-				document.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`)?.classList.add('selected');
-			}
-
-			window.addEventListener('keydown', (e) => {
-				if (!selectedCell) return;
-				const { r, c } = selectedCell;
-				const val = parseInt(e.key);
-				if (val >= 1 && val <= 9) {
-					const cell = document.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
-					if (cell) {
-            const span = cell.querySelector('.val') || document.createElement('span');
-            span.className = 'val';
-            span.textContent = val;
-            if (!cell.contains(span)) cell.appendChild(span);
-          }
-				} else if (e.key === 'Backspace' || e.key === 'Delete') {
-          const cell = document.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
-          cell.querySelector('.val')?.remove();
+      function formatOp(op) {
+        switch (op) {
+          case 'Add': return '+';
+          case 'Subtract': return '-';
+          case 'Multiply': return '×';
+          case 'Divide': return '÷';
+          case 'None': return '';
+          default: return '';
         }
-			});
+      }
 
-			document.getElementById('btn-new').addEventListener('click', fetchPuzzle);
-			
-      document.getElementById('btn-solve').addEventListener('click', async () => {
+      function selectCell(r, c) {
+        if (gameWon) return;
+        if (selectedCell) {
+          document.querySelector(`.cell[data-row="${selectedCell.r}"][data-col="${selectedCell.c}"]`)?.classList.remove('selected');
+        }
+        selectedCell = { r, c };
+        document.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`)?.classList.add('selected');
+      }
+
+      window.addEventListener('keydown', (e) => {
+        if (gameWon) return;
+
+        // Undo / Redo
+        if (e.ctrlKey || e.metaKey) {
+          if (e.key === 'z') { e.preventDefault(); undoMove(); return; }
+          if (e.key === 'y') { e.preventDefault(); redoMove(); return; }
+        }
+
+        if (!selectedCell) return;
+        const { r, c } = selectedCell;
+        const size = currentPuzzle ? currentPuzzle.puzzleSize : 0;
+
+        // Keyboard navigation
+        if (e.key === 'ArrowUp' && r > 1) { e.preventDefault(); selectCell(r - 1, c); return; }
+        if (e.key === 'ArrowDown' && r < size) { e.preventDefault(); selectCell(r + 1, c); return; }
+        if (e.key === 'ArrowLeft' && c > 1) { e.preventDefault(); selectCell(r, c - 1); return; }
+        if (e.key === 'ArrowRight' && c < size) { e.preventDefault(); selectCell(r, c + 1); return; }
+
+        const val = parseInt(e.key);
+        const cell = document.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
+        if (!cell) return;
+        const span = cell.querySelector('.val');
+        const currentVal = span ? parseInt(span.textContent) : null;
+
+        if (val >= 1 && val <= size) {
+          if (currentVal !== val) {
+            history.push({ r, c, oldVal: currentVal, newVal: val });
+            redoStack = [];
+            setCellValue(r, c, val);
+            incrementMove();
+          }
+        } else if (e.key === 'Backspace' || e.key === 'Delete') {
+          if (currentVal !== null) {
+            history.push({ r, c, oldVal: currentVal, newVal: null });
+            redoStack = [];
+            setCellValue(r, c, null);
+            incrementMove();
+          }
+        }
+      });
+
+      function setCellValue(r, c, val) {
+        const cell = document.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
+        if (!cell) return;
+        let span = cell.querySelector('.val');
+        if (val !== null) {
+          if (!span) {
+            span = document.createElement('span');
+            span.className = 'val';
+            cell.appendChild(span);
+          }
+          span.textContent = val;
+          span.className = 'val'; // remove hint class
+        } else {
+          if (span) span.remove();
+        }
+        validateBoard();
+      }
+
+      function undoMove() {
+        if (history.length === 0 || gameWon) return;
+        const move = history.pop();
+        redoStack.push(move);
+        setCellValue(move.r, move.c, move.oldVal);
+      }
+
+      function redoMove() {
+        if (redoStack.length === 0 || gameWon) return;
+        const move = redoStack.pop();
+        history.push(move);
+        setCellValue(move.r, move.c, move.newVal);
+      }
+
+      function getCurrentGrid(size) {
+        const grid = [];
+        for (let r = 1; r <= size; r++) {
+          const row = [];
+          for (let c = 1; c <= size; c++) {
+            const cell = document.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
+            const valSpan = cell.querySelector('.val');
+            row.push(valSpan ? parseInt(valSpan.textContent) : null);
+          }
+          grid.push(row);
+        }
+        return grid;
+      }
+
+      function validateBoard() {
         if (!currentPuzzle) return;
+        const size = currentPuzzle.puzzleSize;
+        const grid = getCurrentGrid(size);
+
+        document.querySelectorAll('.cell').forEach(c => c.classList.remove('error'));
+
+        let hasErrors = false;
+        let isFull = true;
+
+        for (let r = 0; r < size; r++) {
+          const seen = new Map();
+          for (let c = 0; c < size; c++) {
+            const v = grid[r][c];
+            if (v === null) {
+              isFull = false;
+              continue;
+            }
+            if (seen.has(v)) {
+              hasErrors = true;
+              document.querySelector(`.cell[data-row="${r + 1}"][data-col="${c + 1}"]`).classList.add('error');
+              document.querySelector(`.cell[data-row="${r + 1}"][data-col="${seen.get(v) + 1}"]`).classList.add('error');
+            } else {
+              seen.set(v, c);
+            }
+          }
+        }
+
+        for (let c = 0; c < size; c++) {
+          const seen = new Map();
+          for (let r = 0; r < size; r++) {
+            const v = grid[r][c];
+            if (v === null) continue;
+            if (seen.has(v)) {
+              hasErrors = true;
+              document.querySelector(`.cell[data-row="${r + 1}"][data-col="${c + 1}"]`).classList.add('error');
+              document.querySelector(`.cell[data-row="${seen.get(v) + 1}"][data-col="${c + 1}"]`).classList.add('error');
+            } else {
+              seen.set(v, r);
+            }
+          }
+        }
+
+        let cagesValid = true;
+        for (const cage of currentPuzzle.puzzleCages) {
+          if (!validateCage(cage, grid)) {
+            cagesValid = false;
+          }
+        }
+
+        if (isFull && !hasErrors && cagesValid) {
+          gameWon = true;
+          stopTimer();
+          
+          if (selectedCell) {
+            document.querySelector(`.cell[data-row="${selectedCell.r}"][data-col="${selectedCell.c}"]`)?.classList.remove('selected');
+            selectedCell = null;
+          }
+
+          if (typeof confetti !== 'undefined') {
+            confetti({
+              particleCount: 150,
+              spread: 70,
+              origin: { y: 0.6 }
+            });
+          }
+        }
+      }
+
+      function validateCage(cage, grid) {
+        const vals = cage.cageCells.map(([r, c]) => grid[r - 1][c - 1]);
+        if (vals.some(v => v === null)) return false; 
+        
+        const target = cage.cageTarget;
+        switch (cage.cageOperation) {
+          case 'Add':
+            return vals.reduce((a, b) => a + b, 0) === target;
+          case 'Multiply':
+            return vals.reduce((a, b) => a * b, 1) === target;
+          case 'Subtract':
+            return vals.length === 2 && Math.abs(vals[0] - vals[1]) === target;
+          case 'Divide':
+            return vals.length === 2 && (vals[0] / vals[1] === target || vals[1] / vals[0] === target);
+          case 'None':
+            return vals.length === 1 && vals[0] === target;
+          default:
+            return false;
+        }
+      }
+
+      function fillSolution(solution) {
+        const size = currentPuzzle.puzzleSize;
+        history = [];
+        redoStack = [];
+        for (let r = 0; r < size; r++) {
+          for (let c = 0; c < size; c++) {
+            setCellValue(r + 1, c + 1, solution[r][c]);
+          }
+        }
+      }
+
+      function hintCell(r, c, val) {
+        history.push({ r, c, oldVal: null, newVal: val });
+        redoStack = [];
+        setCellValue(r, c, val);
+        const cell = document.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
+        if (cell) {
+            const span = cell.querySelector('.val');
+            if (span) { span.classList.add('hint'); }
+        }
+        incrementMove();
+      }
+
+      document.getElementById('btn-new').addEventListener('click', fetchPuzzle);
+      document.getElementById('btn-undo').addEventListener('click', undoMove);
+      document.getElementById('btn-redo').addEventListener('click', redoMove);
+      
+      document.getElementById('btn-solve').addEventListener('click', async () => {
+        if (!currentPuzzle || gameWon) return;
         const res = await fetch('http://localhost:3001/api/solve', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -141,7 +382,7 @@ import '../styles/global.css';
       });
 
       document.getElementById('btn-hint').addEventListener('click', async () => {
-        if (!currentPuzzle) return;
+        if (!currentPuzzle || gameWon) return;
         
         const grid = getCurrentGrid(currentPuzzle.puzzleSize);
         const gameState = {
@@ -161,51 +402,12 @@ import '../styles/global.css';
         const json = await res.json();
         if (json.apiStatus === 'success') {
           const [pos, val] = json.apiData;
-          fillCell(pos[0], pos[1], val);
+          hintCell(pos[0], pos[1], val);
         }
       });
 
-      function getCurrentGrid(size) {
-        const grid = [];
-        for (let r = 1; r <= size; r++) {
-          const row = [];
-          for (let c = 1; c <= size; c++) {
-            const cell = document.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
-            const valSpan = cell.querySelector('.val');
-            row.push(valSpan ? parseInt(valSpan.textContent) : null);
-          }
-          grid.push(row);
-        }
-        return grid;
-      }
-
-      function fillCell(r, c, val) {
-        const cell = document.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
-        if (cell) {
-          const span = cell.querySelector('.val') || document.createElement('span');
-          span.className = 'val hint';
-          span.textContent = val;
-          if (!cell.contains(span)) cell.appendChild(span);
-        }
-      }
-
-      function fillSolution(solution) {
-        const cells = document.querySelectorAll('.cell');
-        cells.forEach(cell => {
-          const r = parseInt(cell.dataset.row) - 1;
-          const c = parseInt(cell.dataset.col) - 1;
-          const val = solution[r][c];
-          if (val) {
-            const span = cell.querySelector('.val') || document.createElement('span');
-            span.className = 'val';
-            span.textContent = val;
-            if (!cell.contains(span)) cell.appendChild(span);
-          }
-        });
-      }
-
-			// Initial load
-			fetchPuzzle();
+      // Initial load
+      fetchPuzzle();
 		</script>
 	</body>
 </html>
