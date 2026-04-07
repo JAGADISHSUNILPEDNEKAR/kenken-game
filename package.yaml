@@ -27,6 +27,7 @@ dependencies:
 - http-types >= 0.12
 - wai-cors >= 0.2.7
 - vector >= 0.12.3
+- random >= 1.2
 
 library:
   source-dirs: src

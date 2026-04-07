@@ -48,6 +48,7 @@ library
     , http-types >=0.12
     , megaparsec >=9.0.0
     , mtl >=2.2.2
+    , random >=1.2
     , scotty >=0.12
     , text >=1.2.4.1
     , time >=1.9.3
@@ -74,6 +75,7 @@ executable kenken-game-exe
     , kenken-game
     , megaparsec >=9.0.0
     , mtl >=2.2.2
+    , random >=1.2
     , scotty >=0.12
     , text >=1.2.4.1
     , time >=1.9.3
@@ -100,6 +102,7 @@ executable kenken-server
     , kenken-game
     , megaparsec >=9.0.0
     , mtl >=2.2.2
+    , random >=1.2
     , scotty
     , text >=1.2.4.1
     , time >=1.9.3
@@ -128,6 +131,7 @@ test-suite kenken-game-test
     , kenken-game
     , megaparsec >=9.0.0
     , mtl >=2.2.2
+    , random >=1.2
     , scotty >=0.12
     , text >=1.2.4.1
     , time >=1.9.3

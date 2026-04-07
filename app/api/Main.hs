@@ -11,6 +11,11 @@ import GHC.Generics
 import Control.Monad.IO.Class (liftIO)
 import qualified Data.Text.Lazy as TL
 import qualified Data.Set as Set
+import System.Random (randomRIO)
+import System.Directory (listDirectory)
+import System.FilePath ((</>), takeExtension)
+import Control.Monad (filterM)
+import System.Directory (doesFileExist)
 
 import KenKen.Types
 import KenKen.Grid
@@ -30,23 +35,25 @@ instance FromJSON a => FromJSON (ApiResponse a)
 
 main :: IO ()
 main = scotty 3001 $ do
-  middleware simpleCors
+  middleware $ cors $ const $ Just $ simpleCorsResourcePolicy
+    { corsOrigins = Just (["http://localhost:4321"], True)
+    , corsMethods = ["GET", "POST", "OPTIONS"]
+    , corsRequestHeaders = ["Content-Type"]
+    }
 
-  -- Get a sample puzzle
+  -- Get a random puzzle from file
   get "/api/puzzle" $ do
-    -- For now, return a hardcoded 4x4 puzzle or load one from file
-    let puzzle = Puzzle 4 
-          [ Cage 1 Add 5 (Set.fromList [(1,1),(1,2)])
-          , Cage 2 Multiply 6 (Set.fromList [(1,3),(2,3)])
-          , Cage 3 Subtract 1 (Set.fromList [(1,4),(2,4)])
-          , Cage 4 None 2 (Set.fromList [(2,1)])
-          , Cage 5 Divide 2 (Set.fromList [(2,2),(3,2)])
-          , Cage 6 Add 7 (Set.fromList [(3,1),(4,1)])
-          , Cage 7 Multiply 4 (Set.fromList [(3,3),(3,4)])
-          , Cage 8 Subtract 2 (Set.fromList [(4,2),(4,3)])
-          , Cage 9 None 4 (Set.fromList [(4,4)])
-          ] Nothing
-    json $ ApiResponse "success" (Just puzzle) Nothing
+    files <- liftIO $ listDirectory "puzzles"
+    let kenFiles = filter (\f -> takeExtension f == ".ken") files
+    if null kenFiles
+      then json (ApiResponse "error" Nothing (Just "No puzzles found") :: ApiResponse ())
+      else do
+        idx <- liftIO $ randomRIO (0, length kenFiles - 1)
+        let selectedFile = "puzzles" </> (kenFiles !! idx)
+        content <- liftIO $ readFile selectedFile
+        case parsePuzzleFile content of
+          Left err -> json (ApiResponse "error" Nothing (Just err) :: ApiResponse ())
+          Right puzzle -> json $ ApiResponse "success" (Just puzzle) Nothing
 
   -- Solve a puzzle
   post "/api/solve" $ do
@@ -54,6 +61,13 @@ main = scotty 3001 $ do
     case solvePuzzle puzzle of
       Nothing -> json (ApiResponse "error" Nothing (Just "No solution found") :: ApiResponse ())
       Just sol -> json $ ApiResponse "success" (Just (gridToNestedList sol)) Nothing
+
+  -- Get a hint for the current puzzle state
+  post "/api/hint" $ do
+    gameState <- jsonData :: ActionM GameState
+    case getHint gameState of
+      Nothing -> json (ApiResponse "error" Nothing (Just "No hint found") :: ApiResponse ())
+      Just (pos, val) -> json $ ApiResponse "success" (Just (pos, val)) Nothing
 
   -- Health check
   get "/health" $ do
