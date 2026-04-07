@@ -108,3 +108,21 @@ gridToNestedList grid =
 nestedListToGrid :: Size -> [[Cell]] -> Grid
 nestedListToGrid n rows = 
   listArray ((1,1), (n,n)) (concat rows)
+
+-- Generator Types
+data Difficulty = Easy | Medium | Hard
+  deriving (Eq, Show, Read, Generic)
+
+instance ToJSON Difficulty
+instance FromJSON Difficulty
+
+data GenerateRequest = GenerateRequest
+  { reqSize :: Size
+  , reqDifficulty :: Difficulty
+  } deriving (Show, Generic)
+
+instance ToJSON GenerateRequest
+instance FromJSON GenerateRequest where
+  parseJSON = withObject "GenerateRequest" $ \v -> GenerateRequest
+    <$> v .: "size"
+    <*> v .: "difficulty"
