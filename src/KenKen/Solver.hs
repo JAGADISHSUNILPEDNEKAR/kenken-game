@@ -56,10 +56,9 @@ isValidForCageConstraint grid cage pos val =
     None -> val == cageTarget cage
     Add -> checkAddConstraint tempGrid cage val remainingPositions
     Multiply -> checkMultiplyConstraint tempGrid cage val remainingPositions
-    Subtract -> remainingPositions == 0 && evaluateCage tempGrid cage
-    Divide -> remainingPositions == 0 && evaluateCage tempGrid cage
+    Subtract -> remainingPositions > 0 || evaluateCage tempGrid cage
+    Divide -> remainingPositions > 0 || evaluateCage tempGrid cage
     _ -> True
-
 -- Check addition constraint with pruning
 checkAddConstraint :: Grid -> Cage -> Value -> Int -> Bool
 checkAddConstraint grid cage _ remaining
