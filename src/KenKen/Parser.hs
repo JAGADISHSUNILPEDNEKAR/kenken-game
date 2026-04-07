@@ -34,24 +34,23 @@ puzzleParser = do
 sizeParser :: Parser Size
 sizeParser = do
   _ <- string "size"
-  _ <- space
+  _ <- space1
   n <- L.decimal
-  _ <- newline
   return n
 
 -- Parse a cage
 cageParser :: Parser Cage
 cageParser = do
   _ <- string "cage"
-  _ <- space
+  _ <- space1
   cid <- L.decimal
-  _ <- space
+  _ <- space1
   op <- operationParser
-  _ <- space
+  _ <- space1
   target <- L.decimal
-  _ <- space
+  _ <- space1
   cells <- cellsParser
-  _ <- newline
+  _ <- space
   return $ Cage cid op target (Set.fromList cells)
 
 -- Parse operation
