@@ -22,6 +22,7 @@ import KenKen.Grid
 import KenKen.Cage
 import KenKen.Solver
 import KenKen.Parser
+import KenKen.Generator
 
 -- API Response Types
 data ApiResponse a = ApiResponse
@@ -54,6 +55,12 @@ main = scotty 3001 $ do
         case parsePuzzleFile content of
           Left err -> json (ApiResponse "error" Nothing (Just err) :: ApiResponse ())
           Right puzzle -> json $ ApiResponse "success" (Just puzzle) Nothing
+
+  -- Generate a puzzle dynamically
+  post "/api/generate" $ do
+    req <- jsonData :: ActionM GenerateRequest
+    puzzle <- liftIO $ generatePuzzle (reqSize req) (reqDifficulty req)
+    json (ApiResponse "success" (Just puzzle) Nothing :: ApiResponse Puzzle)
 
   -- Solve a puzzle
   post "/api/solve" $ do
