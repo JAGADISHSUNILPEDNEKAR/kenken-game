@@ -28,6 +28,7 @@ library
       KenKen.Display
       KenKen.FileIO
       KenKen.Game
+      KenKen.Generator
       KenKen.Grid
       KenKen.Parser
       KenKen.Solver

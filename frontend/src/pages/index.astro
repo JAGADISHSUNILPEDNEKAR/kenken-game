@@ -44,6 +44,8 @@ import '../styles/global.css';
 		</div>
 
 		<script>
+      const API_URL = import.meta.env?.PUBLIC_API_URL || 'http://localhost:3001';
+
       let currentPuzzle = null;
       let selectedCell = null;
       let moveCount = 0;
@@ -102,7 +104,7 @@ import '../styles/global.css';
           const size = parseInt(document.getElementById('size-select').value);
           const diff = document.getElementById('diff-select').value;
           
-          const res = await fetch('http://localhost:3001/api/generate', {
+          const res = await fetch(`${API_URL}/api/generate`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ size: size, difficulty: diff })
@@ -387,7 +389,7 @@ import '../styles/global.css';
       
       document.getElementById('btn-solve').addEventListener('click', async () => {
         if (!currentPuzzle || gameWon) return;
-        const res = await fetch('http://localhost:3001/api/solve', {
+        const res = await fetch(`${API_URL}/api/solve`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(currentPuzzle)
@@ -411,7 +413,7 @@ import '../styles/global.css';
           completed: false
         };
 
-        const res = await fetch('http://localhost:3001/api/hint', {
+        const res = await fetch(`${API_URL}/api/hint`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(gameState)

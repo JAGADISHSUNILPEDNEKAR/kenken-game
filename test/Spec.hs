@@ -1,5 +1,8 @@
 import Test.Hspec
 import KenKen
+import KenKen.Types (Difficulty(..), puzzleSize, puzzleCages, getCellValue)
+import KenKen.Generator (generatePuzzle)
+import KenKen.Solver (solvePuzzle)
 import qualified Data.Set as Set
 
 main :: IO ()
@@ -36,6 +39,20 @@ main = hspec $ do
       case findCageByPosition cages (1,1) of
         Just cage -> cageId cage `shouldBe` 1
         Nothing -> error "Cage not found"
+
+    it "evaluates complex multiplication constraint correctly" $ do
+      let cage = Cage 3 Multiply 12 (Set.fromList [(2,1), (2,2), (3,1)])
+          grid1 = setCellValue (setCellValue (setCellValue (emptyGrid 4) (2,1) (Just 3)) (2,2) (Just 4)) (3,1) (Just 2)
+      evaluateCage grid1 cage `shouldBe` False
+      let grid2 = setCellValue grid1 (3,1) (Just 1)
+      evaluateCage grid2 cage `shouldBe` True
+
+    it "evaluates division constraint correctly independent of position order" $ do
+      let cage = Cage 4 Divide 2 (Set.fromList [(3,3), (3,4)])
+          grid1 = setCellValue (setCellValue (emptyGrid 4) (3,3) (Just 4)) (3,4) (Just 2)
+      evaluateCage grid1 cage `shouldBe` True
+      let grid2 = setCellValue (setCellValue (emptyGrid 4) (3,3) (Just 2)) (3,4) (Just 4)
+      evaluateCage grid2 cage `shouldBe` True
   
   describe "Validation" $ do
     it "validates row constraint" $ do
@@ -51,7 +68,6 @@ main = hspec $ do
     it "detects completed puzzle" $ do
       let puzzle = samplePuzzle4x4
           gs = initGame puzzle
-          -- Would need to fill in complete solution
       isPuzzleSolved gs `shouldBe` False
   
   describe "Parser" $ do
@@ -67,3 +83,29 @@ main = hspec $ do
           output = generatePuzzleFile puzzle
       output `shouldContain` "size 4"
       output `shouldContain` "cage 1 + 5"
+
+    it "fails on invalid puzzle formatting" $ do
+      let input = "size 4\ncage 1 ? 5 [(1,1),(1,2)]\n"
+      case parsePuzzleFile input of
+        Left _ -> True `shouldBe` True
+        Right _ -> expectationFailure "Should have failed to parse invalid operation"
+
+  describe "Generator and Solver" $ do
+    it "generates a valid 4x4 Easy puzzle that the solver resolves" $ do
+      puzzle <- generatePuzzle 4 Easy
+      puzzleSize puzzle `shouldBe` 4
+      length (puzzleCages puzzle) `shouldSatisfy` (> 0)
+      let mSol = solvePuzzle puzzle
+      case mSol of
+        Just _ -> True `shouldBe` True
+        Nothing -> expectationFailure "Solver could not find solution for generated puzzle"
+
+    it "generates a valid 6x6 Medium puzzle" $ do
+      puzzle <- generatePuzzle 6 Medium
+      puzzleSize puzzle `shouldBe` 6
+      length (puzzleCages puzzle) `shouldSatisfy` (> 0)
+
+    it "correctly returns Nothing for unsolvable puzzles" $ do
+      let cage1 = Cage 1 Add 20 (Set.fromList [(1,1), (1,2)])
+          puzzle = Puzzle 4 [cage1] Nothing
+      solvePuzzle puzzle `shouldBe` Nothing

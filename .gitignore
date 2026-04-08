@@ -26,4 +26,5 @@ cabal.project.local~
 saves/
 *.ken.bak
 .vscode/
-.idea/
+.idea/build.log
+server.log
