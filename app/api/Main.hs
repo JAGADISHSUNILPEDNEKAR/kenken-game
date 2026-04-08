@@ -37,7 +37,7 @@ instance FromJSON a => FromJSON (ApiResponse a)
 main :: IO ()
 main = scotty 3001 $ do
   middleware $ cors $ const $ Just $ simpleCorsResourcePolicy
-    { corsOrigins = Just (["http://localhost:4321"], True)
+    { corsOrigins = Just (["http://localhost:4321", "https://kenken-game.vercel.app"], True)
     , corsMethods = ["GET", "POST", "OPTIONS"]
     , corsRequestHeaders = ["Content-Type"]
     }
